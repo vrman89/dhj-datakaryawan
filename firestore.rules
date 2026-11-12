@@ -1,0 +1,103 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isBootstrappedAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == "virman.coc00@gmail.com" ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "ADMIN")
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Validation for Employee entity
+    function isValidEmployee(data) {
+      return data.name is string && data.name.size() >= 3 && data.name.size() <= 100
+        && data.nik is string && data.nik.size() >= 3 && data.nik.size() <= 30
+        && data.address is string && data.address.size() >= 3 && data.address.size() <= 500
+        && data.divisionId is string && data.divisionId.size() <= 100
+        && data.divisionName is string && data.divisionName.size() <= 100
+        && data.subcontId is string && data.subcontId.size() <= 100
+        && data.subcontName is string && data.subcontName.size() <= 100
+        && data.employeeStatus in ['Internal', 'Subcont', 'Outsourcing', 'Kontrak', 'Tetap', 'Lainnya']
+        && data.verificationStatus in ['Menunggu Verifikasi', 'Terverifikasi', 'Perlu Perbaikan', 'Tidak Aktif']
+        && (!('phone' in data) || (data.phone is string && data.phone.size() <= 50))
+        && (!('nikKtp' in data) || (data.nikKtp is string && data.nikKtp.size() <= 30))
+        && (!('ktpPhoto' in data) || (data.ktpPhoto is string && data.ktpPhoto.size() <= 500000))
+        && (!('facePhoto' in data) || (data.facePhoto is string && data.facePhoto.size() <= 500000));
+    }
+
+    // Validation for Division entity
+    function isValidDivision(data) {
+      return data.name is string && data.name.size() >= 2 && data.name.size() <= 100
+        && data.status in ['Aktif', 'Nonaktif'];
+    }
+
+    // Validation for Subcont entity
+    function isValidSubcont(data) {
+      return data.name is string && data.name.size() >= 2 && data.name.size() <= 100
+        && data.status in ['Aktif', 'Nonaktif'];
+    }
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Divisions collection: allow read and validated writes
+    match /divisions/{divisionId} {
+      allow read: if true;
+      allow create: if isValidId(divisionId) && isValidDivision(incoming());
+      allow update: if isValidDivision(incoming());
+      allow delete: if true;
+    }
+
+    // Subconts collection: allow read and validated writes
+    match /subconts/{subcontId} {
+      allow read: if true;
+      allow create: if isValidId(subcontId) && isValidSubcont(incoming());
+      allow update: if isValidSubcont(incoming());
+      allow delete: if true;
+    }
+
+    // Employees collection: allow read, validated self-registration and admin management
+    match /employees/{employeeId} {
+      allow read: if true;
+      allow create: if isValidId(employeeId) && isValidEmployee(incoming());
+      allow update: if isValidEmployee(incoming());
+      allow delete: if true;
+    }
+
+    // Users and Admins collection
+    match /users/{userId} {
+      allow read, write: if true;
+    }
+
+    match /admins/{adminId} {
+      allow read, write: if true;
+    }
+
+    // Connection testing
+    match /test/{docId} {
+      allow read, write: if true;
+    }
+  }
+}

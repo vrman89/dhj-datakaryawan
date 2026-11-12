@@ -1,0 +1,8 @@
+{
+  "name": "DHJ EMPLOYEE DATA - Employee Data Management",
+  "description": "Aplikasi web profesional pendataan karyawan internal dan tenaga kerja subcont dengan validasi NIK unik, verifikasi admin, ekspor Excel, dan form responsif.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
