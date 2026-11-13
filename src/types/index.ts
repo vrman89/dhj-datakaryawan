@@ -54,11 +54,25 @@ export interface Subcont {
   updatedAt: string;
 }
 
+export type AdminRole = 'ADMIN' | 'SUPER_ADMIN';
+
+export interface AdminAccount {
+  id: string;
+  username: string;
+  password: string;
+  displayName: string;
+  role: AdminRole;
+  status: ActiveStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface UserProfile {
   id: string;
   name: string;
+  username?: string;
   email: string;
-  role: 'ADMIN' | 'EMPLOYEE';
+  role: 'ADMIN' | 'SUPER_ADMIN' | 'EMPLOYEE';
   status: 'Aktif' | 'Nonaktif';
   createdAt: string;
 }
@@ -70,4 +84,5 @@ export type ActiveTab =
   | 'divisions' 
   | 'subconts' 
   | 'reports' 
+  | 'users'
   | 'settings';

@@ -204,6 +204,54 @@
         }
       },
       "required": ["email", "role"]
+    },
+    "AdminUser": {
+      "title": "AdminUser",
+      "description": "Admin and Super Admin login credentials managed via User & Password page",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique account identifier"
+        },
+        "username": {
+          "type": "string",
+          "description": "Login username",
+          "minLength": 2,
+          "maxLength": 50
+        },
+        "password": {
+          "type": "string",
+          "description": "Account password",
+          "minLength": 4,
+          "maxLength": 100
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Display name of the administrator",
+          "minLength": 2,
+          "maxLength": 100
+        },
+        "role": {
+          "type": "string",
+          "enum": ["ADMIN", "SUPER_ADMIN"],
+          "description": "Role permission level"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["Aktif", "Nonaktif"],
+          "description": "Account activation status"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Creation timestamp"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "Last update timestamp"
+        }
+      },
+      "required": ["username", "password", "displayName", "role", "status", "createdAt", "updatedAt"]
     }
   },
   "firestore": {
@@ -222,6 +270,10 @@
     "/users/{userId}": {
       "schema": "User",
       "description": "Collection of system users and administrators"
+    },
+    "/admin_users/{userId}": {
+      "schema": "AdminUser",
+      "description": "Collection of Admin and Super Admin accounts"
     }
   }
 }

@@ -11,8 +11,8 @@ import {
   getDoc
 } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../config/firebase';
-import { Division, Employee, Subcont } from '../types';
-import { INITIAL_DIVISIONS, INITIAL_EMPLOYEES, INITIAL_SUBCONTS } from './seedData';
+import { AdminAccount, Division, Employee, Subcont } from '../types';
+import { INITIAL_ADMIN_ACCOUNTS, INITIAL_DIVISIONS, INITIAL_EMPLOYEES, INITIAL_SUBCONTS } from './seedData';
 
 const LOCAL_STORAGE_KEY_PREFIX = 'dhj_emp_data_';
 
@@ -70,6 +70,15 @@ class DataService {
           await setDoc(doc(db, 'employees', emp.id), emp);
         }
       }
+
+      // Check admin_users
+      const adminSnap = await getDocs(collection(db, 'admin_users'));
+      if (adminSnap.empty) {
+        console.log('Seeding initial admin_users to Firestore...');
+        for (const acc of INITIAL_ADMIN_ACCOUNTS) {
+          await setDoc(doc(db, 'admin_users', acc.id), acc);
+        }
+      }
     } catch (error) {
       console.warn('Firestore initial seeding fallback to local cache:', error);
       // Ensure local cache is populated
@@ -81,6 +90,9 @@ class DataService {
       }
       if (!localStorage.getItem(LOCAL_STORAGE_KEY_PREFIX + 'employees')) {
         setLocal('employees', INITIAL_EMPLOYEES);
+      }
+      if (!localStorage.getItem(LOCAL_STORAGE_KEY_PREFIX + 'admin_users')) {
+        setLocal('admin_users', INITIAL_ADMIN_ACCOUNTS);
       }
     }
   }
@@ -386,11 +398,175 @@ class DataService {
     }
   }
 
+  // Admin Users Subscription & Auth & CRUD
+  subscribeAdminAccounts(
+    callback: (accounts: AdminAccount[]) => void
+  ): () => void {
+    const cached = getLocal<AdminAccount[]>('admin_users', INITIAL_ADMIN_ACCOUNTS);
+    callback(cached);
+
+    try {
+      const unsub = onSnapshot(
+        collection(db, 'admin_users'),
+        (snapshot) => {
+          const accounts: AdminAccount[] = [];
+          snapshot.forEach((d) => {
+            accounts.push({ ...d.data(), id: d.id } as AdminAccount);
+          });
+          if (accounts.length > 0) {
+            accounts.sort((a, b) => {
+              if (a.role !== b.role) return a.role === 'SUPER_ADMIN' ? -1 : 1;
+              return a.displayName.localeCompare(b.displayName);
+            });
+            setLocal('admin_users', accounts);
+            callback(accounts);
+          }
+        },
+        (error) => {
+          console.warn('admin_users onSnapshot error:', error);
+        }
+      );
+      return unsub;
+    } catch {
+      return () => {};
+    }
+  }
+
+  async getAdminAccounts(): Promise<AdminAccount[]> {
+    try {
+      const snap = await getDocs(collection(db, 'admin_users'));
+      if (!snap.empty) {
+        const accounts: AdminAccount[] = snap.docs.map((d) => ({
+          ...(d.data() as AdminAccount),
+          id: d.id,
+        }));
+        setLocal('admin_users', accounts);
+        return accounts;
+      }
+    } catch (e) {
+      console.warn('getAdminAccounts Firestore fallback:', e);
+    }
+    const cached = getLocal<AdminAccount[]>('admin_users', INITIAL_ADMIN_ACCOUNTS);
+    return cached.length > 0 ? cached : INITIAL_ADMIN_ACCOUNTS;
+  }
+
+  async authenticateAdminAccount(
+    username: string,
+    password: string,
+    requiredRole?: 'SUPER_ADMIN'
+  ): Promise<{ account: AdminAccount | null; error?: string }> {
+    const cleanUser = username.trim().toLowerCase();
+    const accounts = await this.getAdminAccounts();
+
+    // Filter matching username & password
+    const matches = accounts.filter(
+      (acc) =>
+        acc.username.trim().toLowerCase() === cleanUser &&
+        acc.password === password
+    );
+
+    if (matches.length === 0) {
+      return {
+        account: null,
+        error: 'Username atau kata sandi tidak valid.',
+      };
+    }
+
+    const activeMatches = matches.filter((acc) => acc.status === 'Aktif');
+    if (activeMatches.length === 0) {
+      return {
+        account: null,
+        error: 'Akun ini sedang dinonaktifkan oleh Super Admin.',
+      };
+    }
+
+    if (requiredRole === 'SUPER_ADMIN') {
+      const superMatch = activeMatches.find((acc) => acc.role === 'SUPER_ADMIN');
+      if (!superMatch) {
+        return {
+          account: null,
+          error: 'Kredensial tersebut bukan akun Super Admin.',
+        };
+      }
+      return { account: superMatch };
+    }
+
+    // Prefer exact role match (if super admin password entered, grants SUPER_ADMIN; if admin password entered, grants ADMIN)
+    return { account: activeMatches[0] };
+  }
+
+  async createAdminAccount(
+    data: Omit<AdminAccount, 'id' | 'createdAt' | 'updatedAt'>
+  ): Promise<AdminAccount> {
+    const id = 'usr-' + Date.now();
+    const now = new Date().toISOString();
+    const newAccount: AdminAccount = {
+      ...data,
+      id,
+      username: data.username.trim().toLowerCase(),
+      displayName: data.displayName.trim(),
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    const cached = getLocal<AdminAccount[]>('admin_users', INITIAL_ADMIN_ACCOUNTS);
+    cached.push(newAccount);
+    setLocal('admin_users', cached);
+
+    try {
+      await setDoc(doc(db, 'admin_users', id), newAccount);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, `admin_users/${id}`);
+    }
+    return newAccount;
+  }
+
+  async updateAdminAccount(
+    id: string,
+    updates: Partial<AdminAccount>
+  ): Promise<void> {
+    const updated: Partial<AdminAccount> = {
+      ...updates,
+      updatedAt: new Date().toISOString(),
+    };
+    if (updated.username !== undefined) {
+      updated.username = updated.username.trim().toLowerCase();
+    }
+    if (updated.displayName !== undefined) {
+      updated.displayName = updated.displayName.trim();
+    }
+
+    const cached = getLocal<AdminAccount[]>('admin_users', INITIAL_ADMIN_ACCOUNTS);
+    const idx = cached.findIndex((a) => a.id === id);
+    if (idx !== -1) {
+      cached[idx] = { ...cached[idx], ...updated };
+      setLocal('admin_users', cached);
+    }
+
+    try {
+      await updateDoc(doc(db, 'admin_users', id), updated);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `admin_users/${id}`);
+    }
+  }
+
+  async deleteAdminAccount(id: string): Promise<void> {
+    const cached = getLocal<AdminAccount[]>('admin_users', INITIAL_ADMIN_ACCOUNTS);
+    setLocal('admin_users', cached.filter((a) => a.id !== id));
+
+    try {
+      await deleteDoc(doc(db, 'admin_users', id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `admin_users/${id}`);
+    }
+  }
+
   // Reset to default sample seed data
   async resetToSeedData(): Promise<void> {
     setLocal('divisions', INITIAL_DIVISIONS);
     setLocal('subconts', INITIAL_SUBCONTS);
     setLocal('employees', INITIAL_EMPLOYEES);
+    setLocal('admin_users', INITIAL_ADMIN_ACCOUNTS);
 
     try {
       for (const div of INITIAL_DIVISIONS) {
@@ -401,6 +577,9 @@ class DataService {
       }
       for (const emp of INITIAL_EMPLOYEES) {
         await setDoc(doc(db, 'employees', emp.id), emp);
+      }
+      for (const acc of INITIAL_ADMIN_ACCOUNTS) {
+        await setDoc(doc(db, 'admin_users', acc.id), acc);
       }
     } catch (e) {
       console.warn('Reset seed data Firestore write exception:', e);

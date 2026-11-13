@@ -91,8 +91,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span className="text-xs font-semibold text-white leading-tight truncate max-w-[130px]">
                   {currentUser.name}
                 </span>
-                <span className="text-[10px] font-medium text-emerald-400">
-                  {currentUser.role}
+                <span
+                  className={`text-[10px] font-bold ${
+                    currentUser.role === 'SUPER_ADMIN' ? 'text-amber-300' : 'text-emerald-400'
+                  }`}
+                >
+                  {currentUser.role === 'SUPER_ADMIN' ? 'SUPER ADMIN' : currentUser.role}
                 </span>
               </div>
               <button

@@ -1,4 +1,4 @@
-import { Division, Employee, Subcont } from '../types';
+import { AdminAccount, Division, Employee, Subcont } from '../types';
 
 export const INITIAL_DIVISIONS: Division[] = [
   { id: 'div-eng', name: 'Engineering', status: 'Aktif', createdAt: '2026-01-10T08:00:00.000Z', updatedAt: '2026-01-10T08:00:00.000Z' },
@@ -20,6 +20,29 @@ export const INITIAL_SUBCONTS: Subcont[] = [
   { id: 'sub-a', name: 'Subcont A', status: 'Aktif', createdAt: '2026-01-10T08:00:00.000Z', updatedAt: '2026-01-10T08:00:00.000Z' },
   { id: 'sub-b', name: 'Subcont B', status: 'Aktif', createdAt: '2026-01-10T08:00:00.000Z', updatedAt: '2026-01-10T08:00:00.000Z' },
   { id: 'sub-c', name: 'Subcont C', status: 'Aktif', createdAt: '2026-01-10T08:00:00.000Z', updatedAt: '2026-01-10T08:00:00.000Z' },
+];
+
+export const INITIAL_ADMIN_ACCOUNTS: AdminAccount[] = [
+  {
+    id: 'usr-admin-firman',
+    username: 'firman',
+    password: 'admin',
+    displayName: 'Firman (Admin)',
+    role: 'ADMIN',
+    status: 'Aktif',
+    createdAt: '2026-01-10T08:00:00.000Z',
+    updatedAt: '2026-01-10T08:00:00.000Z',
+  },
+  {
+    id: 'usr-superadmin-firman',
+    username: 'firman',
+    password: 'ChangeMe123!',
+    displayName: 'Firman (Super Admin)',
+    role: 'SUPER_ADMIN',
+    status: 'Aktif',
+    createdAt: '2026-01-10T08:00:00.000Z',
+    updatedAt: '2026-01-10T08:00:00.000Z',
+  },
 ];
 
 export const INITIAL_EMPLOYEES: Employee[] = [

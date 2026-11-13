@@ -41,8 +41,19 @@ service cloud.firestore {
         && data.verificationStatus in ['Menunggu Verifikasi', 'Terverifikasi', 'Perlu Perbaikan', 'Tidak Aktif']
         && (!('phone' in data) || (data.phone is string && data.phone.size() <= 50))
         && (!('nikKtp' in data) || (data.nikKtp is string && data.nikKtp.size() <= 30))
+        && (!('birthDate' in data) || (data.birthDate is string && data.birthDate.size() <= 30))
+        && (!('companyName' in data) || (data.companyName is string && data.companyName.size() <= 150))
         && (!('ktpPhoto' in data) || (data.ktpPhoto is string && data.ktpPhoto.size() <= 500000))
         && (!('facePhoto' in data) || (data.facePhoto is string && data.facePhoto.size() <= 500000));
+    }
+
+    // Validation for AdminUser entity
+    function isValidAdminUser(data) {
+      return data.username is string && data.username.size() >= 2 && data.username.size() <= 50
+        && data.password is string && data.password.size() >= 4 && data.password.size() <= 100
+        && data.displayName is string && data.displayName.size() >= 2 && data.displayName.size() <= 100
+        && data.role in ['ADMIN', 'SUPER_ADMIN']
+        && data.status in ['Aktif', 'Nonaktif'];
     }
 
     // Validation for Division entity
@@ -93,6 +104,13 @@ service cloud.firestore {
 
     match /admins/{adminId} {
       allow read, write: if true;
+    }
+
+    match /admin_users/{userId} {
+      allow read: if true;
+      allow create: if isValidId(userId) && isValidAdminUser(incoming());
+      allow update: if isValidAdminUser(incoming());
+      allow delete: if true;
     }
 
     // Connection testing

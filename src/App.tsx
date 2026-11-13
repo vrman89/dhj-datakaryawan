@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider, useToast } from './context/ToastContext';
-import { ActiveTab, Division, Employee, Subcont } from './types';
+import { ActiveTab, AdminAccount, Division, Employee, Subcont } from './types';
 import { dataService } from './services/dataService';
 import { testConnection } from './config/firebase';
 import { isApproaching55 } from './utils/ageUtils';
@@ -29,6 +29,7 @@ import { VerificationQueueView } from './components/admin/VerificationQueueView'
 import { DivisionManagementView } from './components/admin/DivisionManagementView';
 import { SubcontManagementView } from './components/admin/SubcontManagementView';
 import { ReportsView } from './components/admin/ReportsView';
+import { UserManagementView } from './components/admin/UserManagementView';
 import { SettingsView } from './components/admin/SettingsView';
 
 const MainApp: React.FC = () => {
@@ -44,6 +45,7 @@ const MainApp: React.FC = () => {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [divisions, setDivisions] = useState<Division[]>([]);
   const [subconts, setSubconts] = useState<Subcont[]>([]);
+  const [adminAccounts, setAdminAccounts] = useState<AdminAccount[]>([]);
 
   // Modal states
   const [selectedEmployeeDetail, setSelectedEmployeeDetail] = useState<Employee | null>(null);
@@ -59,11 +61,13 @@ const MainApp: React.FC = () => {
     const unsubEmp = dataService.subscribeEmployees((data) => setEmployees(data));
     const unsubDiv = dataService.subscribeDivisions((data) => setDivisions(data));
     const unsubSub = dataService.subscribeSubconts((data) => setSubconts(data));
+    const unsubAdmin = dataService.subscribeAdminAccounts((data) => setAdminAccounts(data));
 
     return () => {
       unsubEmp();
       unsubDiv();
       unsubSub();
+      unsubAdmin();
     };
   }, []);
 
@@ -213,6 +217,10 @@ const MainApp: React.FC = () => {
                 divisions={divisions}
                 subconts={subconts}
               />
+            )}
+
+            {activeTab === 'users' && (
+              <UserManagementView adminAccounts={adminAccounts} />
             )}
 
             {activeTab === 'settings' && <SettingsView />}

@@ -6,6 +6,7 @@ import {
   Building,
   Layers,
   FileSpreadsheet,
+  KeyRound,
   Settings,
   LogOut,
   X,
@@ -30,7 +31,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   pendingVerificationCount,
   retiringCount = 0,
 }) => {
-  const { logout, currentUser } = useAuth();
+  const { logout, currentUser, isSuperAdmin } = useAuth();
 
   const navItems = [
     {
@@ -70,6 +71,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
       label: 'Laporan & Export',
       icon: FileSpreadsheet,
       badge: null,
+    },
+    {
+      id: 'users' as ActiveTab,
+      label: 'User & Password',
+      icon: KeyRound,
+      badge: isSuperAdmin ? 'Super' : 'Lock',
+      badgeColor: isSuperAdmin
+        ? 'bg-indigo-100 text-indigo-800 border border-indigo-200'
+        : 'bg-slate-100 text-slate-600 border border-slate-200',
     },
     {
       id: 'settings' as ActiveTab,
